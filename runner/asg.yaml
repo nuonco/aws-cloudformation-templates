@@ -142,7 +142,7 @@ Resources:
         UserData:
           Fn::Base64: |
             #!/bin/bash
-            curl https://raw.githubusercontent.com/nuonco/aws-runner-init/refs/heads/main/init.sh | bash
+            curl https://raw.githubusercontent.com/nuonco/runner/refs/heads/main/scripts/aws/init.sh | bash
       LaunchTemplateName:
         Fn::Sub: ${AWS::StackName}-runner
     Type: AWS::EC2::LaunchTemplate
