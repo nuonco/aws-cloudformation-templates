@@ -10,15 +10,12 @@ Parameters:
     InstallId:
         Type: String
         Description: The installation ID for the app
-        Default: inlynhknv17p29esh5snj1zlc5
     RunnerId:
         Type: String
         Description: The runner ID
-        Default: runc0yo8geuotojdlr6c34kzom
     RunnerApiToken:
         Type: String
         Description: API token for the runner
-        Default: tok4d81ox6ntxqbmo2y3i5ligz
     RunnerApiUrl:
         Type: String
         Description: API URL for the runner
