@@ -146,3 +146,8 @@ Resources:
       LaunchTemplateName:
         Fn::Sub: ${AWS::StackName}-runner
     Type: AWS::EC2::LaunchTemplate
+
+Outputs:
+  ASG:
+    Description: The runner ASG.
+    Value: !Ref RunnerASG
