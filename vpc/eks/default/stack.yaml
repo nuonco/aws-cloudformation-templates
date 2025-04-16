@@ -205,6 +205,8 @@ Resources:
           Value: !Ref NuonOrgID
         - Key: "app.nuon.co/id"
           Value: !Ref NuonAppID
+        - Key: "domain"
+          Value: "runner"
         - Key: "visibility"
           Value: "private"
 
