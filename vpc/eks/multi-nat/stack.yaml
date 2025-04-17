@@ -484,7 +484,7 @@ Resources:
           Value: !Ref NuonAppID
 
   DefaultPrivateRoute3:
-    Type: AWS::EC2::RoutE
+    Type: AWS::EC2::Route
     Condition: CreatePrivateSubnet3
     Properties:
       RouteTableId: !Ref PrivateRouteTable3
