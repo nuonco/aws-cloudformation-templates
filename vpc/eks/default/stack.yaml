@@ -139,6 +139,8 @@ Resources:
           Value: shared
         - Key: "kubernetes.io/role/elb"
           Value: 1
+        - Key: "network.nuon.co/domain"
+          Value: "public"
         - Key: "visibility"
           Value: "public"
 
@@ -163,6 +165,8 @@ Resources:
           Value: shared
         - Key: "kubernetes.io/role/elb"
           Value: 1
+        - Key: "network.nuon.co/domain"
+          Value: "public"
         - Key: "visibility"
           Value: "public"
 
@@ -187,6 +191,8 @@ Resources:
           Value: shared
         - Key: "kubernetes.io/role/elb"
           Value: 1
+        - Key: "network.nuon.co/domain"
+          Value: "public"
         - Key: "visibility"
           Value: "public"
 
@@ -205,7 +211,7 @@ Resources:
           Value: !Ref NuonOrgID
         - Key: "app.nuon.co/id"
           Value: !Ref NuonAppID
-        - Key: "domain"
+        - Key: "network.nuon.co/domain"
           Value: "runner"
         - Key: "visibility"
           Value: "private"
@@ -229,6 +235,8 @@ Resources:
           Value: shared
         - Key: "kubernetes.io/role/internal-elb"
           Value: 1
+        - Key: "network.nuon.co/domain"
+          Value: "internal"
         - Key: "visibility"
           Value: "private"
 
@@ -252,6 +260,8 @@ Resources:
           Value: shared
         - Key: "kubernetes.io/role/internal-elb"
           Value: 1
+        - Key: "network.nuon.co/domain"
+          Value: "internal"
         - Key: "visibility"
           Value: "private"
 
@@ -275,6 +285,8 @@ Resources:
           Value: shared
         - Key: "kubernetes.io/role/internal-elb"
           Value: 1
+        - Key: "network.nuon.co/domain"
+          Value: "internal"
         - Key: "visibility"
           Value: "private"
 
