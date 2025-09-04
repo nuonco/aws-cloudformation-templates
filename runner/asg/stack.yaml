@@ -5,6 +5,9 @@ Parameters:
   RunnerEgressGroupId:
     Description: The security group for the runner instance that allows outbound traffic.
     Type: AWS::EC2::SecurityGroup::Id
+  InstallId:
+    Type: String
+    Description: The install ID
   RunnerId:
     Type: String
     Description: The runner ID
@@ -15,6 +18,10 @@ Parameters:
     Type: String
     Description: API URL for the runner
     Default: https://runner.nuon.co
+  RunnerInitScriptUrl:
+    Type: String
+    Description: URL for the init script that is added to the use data for the Runner ASG VM instances.
+    Default: https://raw.githubusercontent.com/nuonco/runner/refs/heads/main/scripts/aws/init.sh
   InstanceType:
     Type: String
     Description: EC2 instance type for the runner
@@ -35,7 +42,7 @@ Parameters:
     MaxValue: 100
 
 Resources:
-  RunnerASG:
+  RunnerAutoScalingGroup:
     Properties:
       LaunchTemplate:
         LaunchTemplateId:
@@ -96,10 +103,39 @@ Resources:
       - Key: nuon_runner_id
         Value:
           Ref: RunnerId
+      - Key: runner.nuon.co/id
+        Value:
+          Ref: RunnerId
+      - Key: nuon_install_id
+        Value:
+          Ref: InstallId
+      - Key: install.nuon.co/id
+        Value:
+          Ref: InstallId
       - Key: Name
         Value:
           Fn::Sub: ${RunnerId}-runner-instance
     Type: AWS::IAM::Role
+
+  # this is required to allow the runner ASG instances to access their metadata/tags
+  RunnerInstanceRoleCloudWatchLogPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName:
+        Fn::Sub: nuon-install-${InstallId}-metadata
+      Roles:
+      - Ref: RunnerInstanceRole
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+        - Effect: Allow
+          Action:
+          - ec2:DescribeTags
+          Resource: "*"
+          Condition:
+            StringEquals:
+              ec2:ResourceTag/Name:
+                Fn::Sub: ${RunnerId}-runner-instance
 
   RunnerLaunchTemplate:
     Properties:
@@ -133,6 +169,9 @@ Resources:
           - Key: nuon_runner_id
             Value:
               Ref: RunnerId
+          - Key: runner.nuon.co/id
+            Value:
+              Ref: RunnerId
           - Key: nuon_runner_api_url
             Value:
               Ref: RunnerApiUrl
@@ -154,14 +193,23 @@ Resources:
             Value:
               Fn::Sub: ${RunnerId}-runner-eni
         UserData:
-          Fn::Base64: |
-            #!/bin/bash
-            curl https://raw.githubusercontent.com/nuonco/runner/refs/heads/main/scripts/aws/init.sh | bash
+          Fn::Base64:
+            Fn::Sub: |
+              #!/bin/bash
+              curl ${RunnerInitScriptUrl} | bash
       LaunchTemplateName:
         Fn::Sub: ${AWS::StackName}-runner
     Type: AWS::EC2::LaunchTemplate
 
+
 Outputs:
   ASG:
     Description: The runner ASG.
-    Value: !Ref RunnerASG
+    Value: !Ref RunnerAutoScalingGroup
+  RunnerInstanceRole:
+    Description: The role used by the instances managed by the Runner ASG
+    Value: !Ref RunnerInstanceRole
+
+  RunnerInstanceRoleARN:
+    Description: The ARN of role used by the instances managed by the Runner ASG
+    Value: !GetAtt RunnerInstanceRole.Arn
