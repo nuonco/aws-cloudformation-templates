@@ -27,6 +27,12 @@ Parameters:
     - t3a.large
     - m5.large
     - m5a.large
+  RootVolumeSize:
+    Type: Number
+    Description: Size of the root EBS volume in GB
+    Default: 30
+    MinValue: 8
+    MaxValue: 100
 
 Resources:
   RunnerASG:
@@ -98,6 +104,14 @@ Resources:
   RunnerLaunchTemplate:
     Properties:
       LaunchTemplateData:
+        BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize:
+              Ref: RootVolumeSize
+            VolumeType: gp3
+            DeleteOnTermination: true
+            Encrypted: true
         IamInstanceProfile:
           Name:
             Ref: RunnerInstanceProfile
