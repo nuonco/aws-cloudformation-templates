@@ -92,13 +92,6 @@ Resources:
             Resource: '*'
           Version: "2012-10-17"
         PolicyName: RunnerInstancePolicy
-      - PolicyDocument:
-          Statement:
-          - Action: '*'
-            Effect: Allow
-            Resource: '*'
-          Version: "2012-10-17"
-        PolicyName: RunnerInstancePolicyAdmin
       Tags:
       - Key: nuon_runner_id
         Value:
