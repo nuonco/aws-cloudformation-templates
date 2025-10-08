@@ -1,6 +1,50 @@
 Description: Deploys a VPC w/ 1 to 3 public subnets (one per az), 1 to 3 private subnets (one per az), a Nat gateway, and an internet gateway. The subnets are tagged for use by EKS (alb ingress controller). To control the number of public or private subnets, remove the subnets (starting with 3 then 2). Will create at least one subnet.
 
 Parameters:
+  BYOVPC:
+    Type: String
+    Default: "false"
+    AllowedValues:
+      - "true"
+      - "false"
+    Description: "Use a VPC you already have, instead of creating a new one"
+
+  VPCID:
+    Type: AWS::EC2::VPC::Id
+    Description: "If using your own VPC, select the VPC you want to use"
+
+  PublicSubnet1Id:
+    Type: AWS::EC2::Subnet::Id
+    Description: "If using your own VPC, select the first public subnet"
+
+  PublicSubnet2Id:
+    Type: AWS::EC2::Subnet::Id
+    Description: "If using your own VPC, select the second public subnet (optional)"
+    Default: ""
+
+  PublicSubnet3Id:
+    Type: AWS::EC2::Subnet::Id
+    Description: "If using your own VPC, select the third public subnet (optional)"
+    Default: ""
+
+  PrivateSubnet1Id:
+    Type: AWS::EC2::Subnet::Id
+    Description: "If using your own VPC, select the first private subnet"
+
+  PrivateSubnet2Id:
+    Type: AWS::EC2::Subnet::Id
+    Description: "If using your own VPC, select the second private subnet (optional)"
+    Default: ""
+
+  PrivateSubnet3Id:
+    Type: AWS::EC2::Subnet::Id
+    Description: "If using your own VPC, select the third private subnet (optional)"
+    Default: ""
+
+  RunnerSubnetId:
+    Type: AWS::EC2::Subnet::Id
+    Description: "If using your own VPC, provide the subnet ID for the runner subnet"
+
   ClusterName:
     Description: The name for the EKS Cluster that will be deployed on this VPC.
     Type: String
@@ -59,6 +103,7 @@ Parameters:
     Default: 10.128.134.0/24
 
 Conditions:
+  CreateVPC: !Equals [!Ref BYOVPC, "false"]
   CreatePublicSubnet2: !Not [!Equals ["", !Ref "PublicSubnet2CIDR"]]
   CreatePublicSubnet3: !Not [!Equals ["", !Ref "PublicSubnet3CIDR"]]
   CreateThreePublicSubnets: !And
@@ -83,9 +128,36 @@ Conditions:
     - !Not [!Condition CreatePrivateSubnet2]
     - !Not [!Condition CreatePrivateSubnet3]
 
+  # Conditions for existing VPC subnet usage
+  UsePublicSubnet2: !Not [!Equals [!Ref PublicSubnet2Id, ""]]
+  UsePublicSubnet3: !Not [!Equals [!Ref PublicSubnet3Id, ""]]
+  UsePrivateSubnet2: !Not [!Equals [!Ref PrivateSubnet2Id, ""]]
+  UsePrivateSubnet3: !Not [!Equals [!Ref PrivateSubnet3Id, ""]]
+
+  UseThreePublicSubnets: !And
+    - !Condition UsePublicSubnet2
+    - !Condition UsePublicSubnet3
+  UseTwoPublicSubnets: !And
+    - !Condition UsePublicSubnet2
+    - !Not [!Condition UsePublicSubnet3]
+  UseOnePublicSubnets: !And
+    - !Not [!Condition UsePublicSubnet2]
+    - !Not [!Condition UsePublicSubnet3]
+
+  UseThreePrivateSubnets: !And
+    - !Condition UsePrivateSubnet2
+    - !Condition UsePrivateSubnet3
+  UseTwoPrivateSubnets: !And
+    - !Condition UsePrivateSubnet2
+    - !Not [!Condition UsePrivateSubnet3]
+  UseOnePrivateSubnets: !And
+    - !Not [!Condition UsePrivateSubnet2]
+    - !Not [!Condition UsePrivateSubnet3]
+
 Resources:
   VPC:
     Type: AWS::EC2::VPC
+    Condition: CreateVPC
     Properties:
       CidrBlock: !Ref VpcCIDR
       EnableDnsSupport: true
@@ -102,6 +174,7 @@ Resources:
 
   InternetGateway:
     Type: AWS::EC2::InternetGateway
+    Condition: CreateVPC
     Properties:
       Tags:
         - Key: Name
@@ -115,15 +188,17 @@ Resources:
 
   InternetGatewayAttachment:
     Type: AWS::EC2::VPCGatewayAttachment
+    Condition: CreateVPC
     Properties:
       InternetGatewayId: !Ref InternetGateway
       VpcId: !Ref VPC
 
   PublicSubnet1:
     Type: AWS::EC2::Subnet
+    Condition: CreateVPC
     Properties:
       VpcId: !Ref VPC
-      AvailabilityZone: !Select [ 0, !GetAZs '' ]
+      AvailabilityZone: !Select [0, !GetAZs ""]
       CidrBlock: !Ref PublicSubnet1CIDR
       MapPublicIpOnLaunch: true
       Tags:
@@ -144,10 +219,10 @@ Resources:
 
   PublicSubnet2:
     Type: AWS::EC2::Subnet
-    Condition: CreatePublicSubnet2
+    Condition: !And [CreateVPC, CreatePublicSubnet2]
     Properties:
       VpcId: !Ref VPC
-      AvailabilityZone: !Select [ 1, !GetAZs '' ]
+      AvailabilityZone: !Select [1, !GetAZs ""]
       CidrBlock: !Ref PublicSubnet2CIDR
       MapPublicIpOnLaunch: true
       Tags:
@@ -168,10 +243,10 @@ Resources:
 
   PublicSubnet3:
     Type: AWS::EC2::Subnet
-    Condition: CreatePublicSubnet3
+    Condition: !And [CreateVPC, CreatePublicSubnet3]
     Properties:
       VpcId: !Ref VPC
-      AvailabilityZone: !Select [ 2, !GetAZs '' ]
+      AvailabilityZone: !Select [2, !GetAZs ""]
       CidrBlock: !Ref PublicSubnet3CIDR
       MapPublicIpOnLaunch: true
       Tags:
@@ -192,9 +267,10 @@ Resources:
 
   RunnerSubnet:
     Type: AWS::EC2::Subnet
+    Condition: CreateVPC
     Properties:
       VpcId: !Ref VPC
-      AvailabilityZone: !Select [ 0, !GetAZs '' ]
+      AvailabilityZone: !Select [0, !GetAZs ""]
       CidrBlock: !Ref RunnerSubnetCIDR
       Tags:
         - Key: Name
@@ -212,9 +288,10 @@ Resources:
 
   PrivateSubnet1:
     Type: AWS::EC2::Subnet
+    Condition: CreateVPC
     Properties:
       VpcId: !Ref VPC
-      AvailabilityZone: !Select [ 0, !GetAZs '' ]
+      AvailabilityZone: !Select [0, !GetAZs ""]
       CidrBlock: !Ref PrivateSubnet1CIDR
       Tags:
         - Key: Name
@@ -234,10 +311,10 @@ Resources:
 
   PrivateSubnet2:
     Type: AWS::EC2::Subnet
-    Condition: CreatePrivateSubnet2
+    Condition: !And [CreateVPC, CreatePrivateSubnet2]
     Properties:
       VpcId: !Ref VPC
-      AvailabilityZone: !Select [ 1, !GetAZs '' ]
+      AvailabilityZone: !Select [1, !GetAZs ""]
       CidrBlock: !Ref PrivateSubnet2CIDR
       Tags:
         - Key: Name
@@ -257,10 +334,10 @@ Resources:
 
   PrivateSubnet3:
     Type: AWS::EC2::Subnet
-    Condition: CreatePrivateSubnet3
+    Condition: !And [CreateVPC, CreatePrivateSubnet3]
     Properties:
       VpcId: !Ref VPC
-      AvailabilityZone: !Select [ 2, !GetAZs '' ]
+      AvailabilityZone: !Select [2, !GetAZs ""]
       CidrBlock: !Ref PrivateSubnet3CIDR
       Tags:
         - Key: Name
@@ -281,6 +358,7 @@ Resources:
   # NAT Gateway
   NatGatewayEIP:
     Type: AWS::EC2::EIP
+    Condition: CreateVPC
     DependsOn: InternetGatewayAttachment
     Properties:
       Domain: vpc
@@ -294,6 +372,7 @@ Resources:
 
   NatGateway:
     Type: AWS::EC2::NatGateway
+    Condition: CreateVPC
     Properties:
       AllocationId: !GetAtt NatGatewayEIP.AllocationId
       SubnetId: !Ref PublicSubnet1
@@ -310,6 +389,7 @@ Resources:
   # Route Tables: Public
   PublicRouteTable:
     Type: AWS::EC2::RouteTable
+    Condition: CreateVPC
     Properties:
       VpcId: !Ref VPC
       Tags:
@@ -324,6 +404,7 @@ Resources:
 
   DefaultPublicRoute:
     Type: AWS::EC2::Route
+    Condition: CreateVPC
     DependsOn: InternetGatewayAttachment
     Properties:
       RouteTableId: !Ref PublicRouteTable
@@ -332,19 +413,20 @@ Resources:
 
   PublicSubnet1RouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
+    Condition: CreateVPC
     Properties:
       RouteTableId: !Ref PublicRouteTable
       SubnetId: !Ref PublicSubnet1
 
   PublicSubnet2RouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
-    Condition: CreatePublicSubnet2
+    Condition: !And [CreateVPC, CreatePublicSubnet2]
     Properties:
       RouteTableId: !Ref PublicRouteTable
       SubnetId: !Ref PublicSubnet2
 
   PublicSubnet3RouteTableAssociation:
-    Condition: CreatePublicSubnet3
+    Condition: !And [CreateVPC, CreatePublicSubnet3]
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       RouteTableId: !Ref PublicRouteTable
@@ -353,6 +435,7 @@ Resources:
   # Route Tables: Private
   PrivateRouteTable:
     Type: AWS::EC2::RouteTable
+    Condition: CreateVPC
     Properties:
       VpcId: !Ref VPC
       Tags:
@@ -367,6 +450,7 @@ Resources:
 
   DefaultPrivateRoute:
     Type: AWS::EC2::Route
+    Condition: CreateVPC
     Properties:
       RouteTableId: !Ref PrivateRouteTable
       DestinationCidrBlock: 0.0.0.0/0
@@ -374,25 +458,27 @@ Resources:
 
   RunnerSubnetRouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
+    Condition: CreateVPC
     Properties:
       RouteTableId: !Ref PrivateRouteTable
       SubnetId: !Ref RunnerSubnet
 
   PrivateSubnet1RouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
+    Condition: CreateVPC
     Properties:
       RouteTableId: !Ref PrivateRouteTable
       SubnetId: !Ref PrivateSubnet1
 
   PrivateSubnet2RouteTableAssociation:
-    Condition: CreatePrivateSubnet2
+    Condition: !And [CreateVPC, CreatePrivateSubnet2]
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       RouteTableId: !Ref PrivateRouteTable
       SubnetId: !Ref PrivateSubnet2
 
   PrivateSubnet3RouteTableAssociation:
-    Condition: CreatePrivateSubnet3
+    Condition: !And [CreateVPC, CreatePrivateSubnet3]
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       RouteTableId: !Ref PrivateRouteTable
@@ -401,26 +487,52 @@ Resources:
 Outputs:
   VPC:
     Description: The VPC.
-    Value: !Ref VPC
+    Value: !If [CreateVPC, !Ref VPC, !Ref VPCID]
 
   PublicSubnets:
     Description: A list of the public subnets.
-    Condition: CreateOnePublicSubnets
-    Value: !Join [ ",", [ !Ref PublicSubnet1 ]]
-    Condition: CreateTwoPublicSubnets
-    Value: !Join [ ",", [ !Ref PublicSubnet1, !Ref PublicSubnet2 ]]
-    Condition: CreateThreePublicSubnets
-    Value: !Join [ ",", [ !Ref PublicSubnet1, !Ref PublicSubnet2, !Ref PublicSubnet3 ]]
+    Value: !If
+      - CreateVPC
+      - !If
+        - CreateThreePublicSubnets
+        - !Join [
+            ",",
+            [!Ref PublicSubnet1, !Ref PublicSubnet2, !Ref PublicSubnet3],
+          ]
+        - !If
+          - CreateTwoPublicSubnets
+          - !Join [",", [!Ref PublicSubnet1, !Ref PublicSubnet2]]
+          - !Join [",", [!Ref PublicSubnet1]]
+      - !If
+        - UseThreePublicSubnets
+        - !Join [",", [!Ref PublicSubnet1Id, !Ref PublicSubnet2Id, !Ref PublicSubnet3Id]]
+        - !If
+          - UseTwoPublicSubnets
+          - !Join [",", [!Ref PublicSubnet1Id, !Ref PublicSubnet2Id]]
+          - !Join [",", [!Ref PublicSubnet1Id]]
 
   PrivateSubnets:
     Description: A list of the private subnets.
-    Condition: CreateOnePrivateSubnets
-    Value: !Join [ ",", [ !Ref PrivateSubnet1 ]]
-    Condition: CreateTwoPrivateSubnets
-    Value: !Join [ ",", [ !Ref PrivateSubnet1, !Ref PrivateSubnet2 ]]
-    Condition: CreateThreePrivateSubnets
-    Value: !Join [ ",", [ !Ref PrivateSubnet1, !Ref PrivateSubnet2, !Ref PrivateSubnet3 ]]
+    Value: !If
+      - CreateVPC
+      - !If
+        - CreateThreePrivateSubnets
+        - !Join [
+            ",",
+            [!Ref PrivateSubnet1, !Ref PrivateSubnet2, !Ref PrivateSubnet3],
+          ]
+        - !If
+          - CreateTwoPrivateSubnets
+          - !Join [",", [!Ref PrivateSubnet1, !Ref PrivateSubnet2]]
+          - !Join [",", [!Ref PrivateSubnet1]]
+      - !If
+        - UseThreePrivateSubnets
+        - !Join [",", [!Ref PrivateSubnet1Id, !Ref PrivateSubnet2Id, !Ref PrivateSubnet3Id]]
+        - !If
+          - UseTwoPrivateSubnets
+          - !Join [",", [!Ref PrivateSubnet1Id, !Ref PrivateSubnet2Id]]
+          - !Join [",", [!Ref PrivateSubnet1Id]]
 
   RunnerSubnet:
     Description: The dedicated private subnet for the runner.
-    Value: !Ref RunnerSubnet
+    Value: !If [CreateVPC, !Ref RunnerSubnet, !Ref RunnerSubnetId]
