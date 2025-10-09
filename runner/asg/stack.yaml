@@ -115,7 +115,7 @@ Resources:
     Type: AWS::IAM::Policy
     Properties:
       PolicyName:
-        Fn::Sub: nuon-install-${InstallId}-metadata
+        Fn::Sub: ${RunnerId}-runner-instance-metadata
       Roles:
       - Ref: RunnerInstanceRole
       PolicyDocument:
@@ -125,11 +125,6 @@ Resources:
           Action:
           - ec2:DescribeTags
           Resource: "*"
-          Condition:
-            StringEquals:
-              ec2:ResourceTag/Name:
-                Fn::Sub: ${RunnerId}-runner-instance
-
   RunnerLaunchTemplate:
     Properties:
       LaunchTemplateData:
