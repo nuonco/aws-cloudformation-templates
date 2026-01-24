@@ -48,7 +48,7 @@ def main() -> int:
     args = [a for a in sys.argv[1:] if a != "--strict"]
 
     if args:
-        templates = [Path(p) for p in args]
+        templates = [Path(p).resolve() for p in args]
     else:
         templates = find_templates(root)
 
