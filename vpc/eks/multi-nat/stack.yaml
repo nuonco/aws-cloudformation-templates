@@ -136,7 +136,7 @@ Resources:
         - Key: "app.nuon.co/id"
           Value: !Ref NuonAppID
         - Key: "kubernetes.io/role/elb"
-          Value: 1
+          Value: "1"
         - Key: "network.nuon.co/domain"
           Value: "public"
         - Key: "visibility"
@@ -160,7 +160,7 @@ Resources:
         - Key: "app.nuon.co/id"
           Value: !Ref NuonAppID
         - Key: "kubernetes.io/role/elb"
-          Value: 1
+          Value: "1"
         - Key: "network.nuon.co/domain"
           Value: "public"
         - Key: "visibility"
@@ -184,7 +184,7 @@ Resources:
         - Key: "app.nuon.co/id"
           Value: !Ref NuonAppID
         - Key: "kubernetes.io/role/elb"
-          Value: 1
+          Value: "1"
         - Key: "network.nuon.co/domain"
           Value: "public"
         - Key: "visibility"
@@ -226,7 +226,7 @@ Resources:
         - Key: "app.nuon.co/id"
           Value: !Ref NuonAppID
         - Key: "kubernetes.io/role/internal-elb"
-          Value: 1
+          Value: "1"
         - Key: "network.nuon.co/domain"
           Value: "internal"
         - Key: "visibility"
@@ -249,7 +249,7 @@ Resources:
         - Key: "app.nuon.co/id"
           Value: !Ref NuonAppID
         - Key: "kubernetes.io/role/internal-elb"
-          Value: 1
+          Value: "1"
         - Key: "network.nuon.co/domain"
           Value: "internal"
         - Key: "visibility"
@@ -272,7 +272,7 @@ Resources:
         - Key: "app.nuon.co/id"
           Value: !Ref NuonAppID
         - Key: "kubernetes.io/role/internal-elb"
-          Value: 1
+          Value: "1"
         - Key: "network.nuon.co/domain"
           Value: "internal"
         - Key: "visibility"
@@ -512,21 +512,23 @@ Outputs:
 
   PublicSubnets:
     Description: A list of the public subnets.
-    Condition: CreateOnePublicSubnets
-    Value: !Join [ ",", [ !Ref PublicSubnet1 ]]
-    Condition: CreateTwoPublicSubnets
-    Value: !Join [ ",", [ !Ref PublicSubnet1, !Ref PublicSubnet2 ]]
-    Condition: CreateThreePublicSubnets
-    Value: !Join [ ",", [ !Ref PublicSubnet1, !Ref PublicSubnet2, !Ref PublicSubnet3 ]]
+    Value: !If
+      - CreateThreePublicSubnets
+      - !Join [",", [!Ref PublicSubnet1, !Ref PublicSubnet2, !Ref PublicSubnet3]]
+      - !If
+        - CreateTwoPublicSubnets
+        - !Join [",", [!Ref PublicSubnet1, !Ref PublicSubnet2]]
+        - !Join [",", [!Ref PublicSubnet1]]
 
   PrivateSubnets:
     Description: A list of the private subnets.
-    Condition: CreateOnePrivateSubnets
-    Value: !Join [ ",", [ !Ref PrivateSubnet1 ]]
-    Condition: CreateTwoPrivateSubnets
-    Value: !Join [ ",", [ !Ref PrivateSubnet1, !Ref PrivateSubnet2 ]]
-    Condition: CreateThreePrivateSubnets
-    Value: !Join [ ",", [ !Ref PrivateSubnet1, !Ref PrivateSubnet2, !Ref PrivateSubnet3 ]]
+    Value: !If
+      - CreateThreePrivateSubnets
+      - !Join [",", [!Ref PrivateSubnet1, !Ref PrivateSubnet2, !Ref PrivateSubnet3]]
+      - !If
+        - CreateTwoPrivateSubnets
+        - !Join [",", [!Ref PrivateSubnet1, !Ref PrivateSubnet2]]
+        - !Join [",", [!Ref PrivateSubnet1]]
 
   RunnerSubnet:
     Description: The dedicated private subnet for the runner.
