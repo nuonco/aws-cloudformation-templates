@@ -1,12 +1,6 @@
 Description: Pass-through CloudFormation stack for BYO-VPC. Accepts existing VPC and subnet IDs, validates they belong together, and outputs them for use by Nuon.
 
 Parameters:
-  # TODO: remove this⤵ when we promote ctl-api
-  ClusterName:
-    Description: The name for the EKS Cluster that will be deployed on this VPC.
-    Type: String
-  # TODO: remove this^ when we promote ctl-api
-
   VpcID:
     Description: The ID of the existing VPC (e.g., vpc-xxxxxxxxx).
     Type: AWS::EC2::VPC::Id
