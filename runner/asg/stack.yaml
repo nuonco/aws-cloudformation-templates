@@ -128,6 +128,9 @@ Resources:
   RunnerLaunchTemplate:
     Properties:
       LaunchTemplateData:
+        MetadataOptions:
+          HttpTokens: required
+          HttpEndpoint: enabled
         BlockDeviceMappings:
         - DeviceName: /dev/xvda
           Ebs:
