@@ -1,5 +1,7 @@
 # Runner ASG
 
+Under no circumstances should this be used for anything other than debugging the runner VM.
+
 ## Parameters
 
 | Name                | Description                                                                            |            Type             |                                       Default                                       | Allowed Values |
