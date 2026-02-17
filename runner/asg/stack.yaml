@@ -43,6 +43,10 @@ Parameters:
 
 Resources:
   RunnerAutoScalingGroup:
+    UpdatePolicy:
+      AutoScalingRollingUpdate:
+        MaxBatchSize: 1
+        MinInstancesInService: 0
     Properties:
       LaunchTemplate:
         LaunchTemplateId:
@@ -128,6 +132,9 @@ Resources:
   RunnerLaunchTemplate:
     Properties:
       LaunchTemplateData:
+        MetadataOptions:
+          HttpTokens: required
+          HttpEndpoint: enabled
         BlockDeviceMappings:
         - DeviceName: /dev/xvda
           Ebs:
