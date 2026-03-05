@@ -11,9 +11,6 @@ Parameters:
   RunnerId:
     Type: String
     Description: The runner ID
-  RunnerApiToken:
-    Type: String
-    Description: API token for the runner
   RunnerApiUrl:
     Type: String
     Description: API URL for the runner
@@ -170,9 +167,6 @@ Resources:
           - Key: nuon_runner_api_url
             Value:
               Ref: RunnerApiUrl
-          - Key: nuon_runner_api_token
-            Value:
-              Ref: RunnerApiToken
           - Key: nuon_runner_id
             Value:
               Ref: RunnerId
