@@ -19,6 +19,10 @@ Parameters:
     Type: String
     Description: URL for the init script that is added to the use data for the Runner ASG VM instances.
     Default: https://raw.githubusercontent.com/nuonco/runner/refs/heads/main/scripts/aws/init.sh
+  RunnerEnvExports:
+    Type: String
+    Description: Optional newline-delimited shell export statements to inject into runner user data before init script execution.
+    Default: ""
   InstanceType:
     Type: String
     Description: EC2 instance type for the runner
@@ -37,6 +41,13 @@ Parameters:
     Default: 30
     MinValue: 8
     MaxValue: 100
+
+Conditions:
+  HasRunnerEnvExports:
+    Fn::Not:
+    - Fn::Equals:
+      - Ref: RunnerEnvExports
+      - ""
 
 Resources:
   RunnerAutoScalingGroup:
@@ -183,9 +194,14 @@ Resources:
               Fn::Sub: ${RunnerId}-runner-eni
         UserData:
           Fn::Base64:
-            Fn::Sub: |
-              #!/bin/bash
-              curl ${RunnerInitScriptUrl} | bash
+            Fn::Join:
+            - "\n"
+            - - "#!/bin/bash"
+              - Fn::If:
+                - HasRunnerEnvExports
+                - Ref: RunnerEnvExports
+                - Ref: AWS::NoValue
+              - Fn::Sub: curl ${RunnerInitScriptUrl} | bash
       LaunchTemplateName:
         Fn::Sub: ${AWS::StackName}-runner
     Type: AWS::EC2::LaunchTemplate
