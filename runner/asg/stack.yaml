@@ -35,6 +35,47 @@ Parameters:
     Default: 100
     MinValue: 30
     MaxValue: 200
+  EnableTelemetryIngress:
+    Type: String
+    Description: Create a private OTLP HTTP endpoint for the runner.
+    Default: "false"
+    AllowedValues:
+    - "true"
+    - "false"
+  VpcId:
+    Type: String
+    Description: VPC containing the runner and telemetry endpoint. Required when telemetry ingress is enabled.
+    Default: ""
+  VpcCIDR:
+    Type: String
+    Description: VPC CIDR allowed to send telemetry. Required when telemetry ingress is enabled.
+    Default: ""
+
+Rules:
+  TelemetryIngressRequiresVpcId:
+    RuleCondition:
+      Fn::Equals:
+      - Ref: EnableTelemetryIngress
+      - "true"
+    Assertions:
+    - Assert:
+        Fn::Not:
+        - Fn::Equals:
+          - Ref: VpcId
+          - ""
+      AssertDescription: VpcId must be provided when telemetry ingress is enabled.
+  TelemetryIngressRequiresVpcCIDR:
+    RuleCondition:
+      Fn::Equals:
+      - Ref: EnableTelemetryIngress
+      - "true"
+    Assertions:
+    - Assert:
+        Fn::Not:
+        - Fn::Equals:
+          - Ref: VpcCIDR
+          - ""
+      AssertDescription: VpcCIDR must be provided when telemetry ingress is enabled.
 
 Conditions:
   HasRunnerEnvVars:
@@ -42,6 +83,10 @@ Conditions:
     - Fn::Equals:
       - Ref: RunnerEnvVars
       - ""
+  TelemetryIngressEnabled:
+    Fn::Equals:
+    - Ref: EnableTelemetryIngress
+    - "true"
 
 Resources:
   RunnerAutoScalingGroup:
@@ -59,6 +104,11 @@ Resources:
           - LatestVersionNumber
       MaxSize: "1"
       MinSize: "1"
+      TargetGroupARNs:
+        Fn::If:
+        - TelemetryIngressEnabled
+        - - Ref: TelemetryTargetGroup
+        - Ref: AWS::NoValue
       Tags:
       - Key: nuon_runner_id
         PropagateAtLaunch: false
@@ -71,6 +121,75 @@ Resources:
       VPCZoneIdentifier:
       - Ref: SubnetId
     Type: AWS::AutoScaling::AutoScalingGroup
+
+  TelemetryLoadBalancerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Condition: TelemetryIngressEnabled
+    Properties:
+      GroupDescription: Access to the private runner OTLP endpoint
+      VpcId:
+        Ref: VpcId
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: 4318
+        ToPort: 4318
+        CidrIp:
+          Ref: VpcCIDR
+      SecurityGroupEgress:
+      - IpProtocol: tcp
+        FromPort: 4318
+        ToPort: 4318
+        DestinationSecurityGroupId:
+          Ref: RunnerEgressGroupId
+
+  TelemetryRunnerIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Condition: TelemetryIngressEnabled
+    Properties:
+      GroupId:
+        Ref: RunnerEgressGroupId
+      IpProtocol: tcp
+      FromPort: 4318
+      ToPort: 4318
+      SourceSecurityGroupId:
+        Ref: TelemetryLoadBalancerSecurityGroup
+
+  TelemetryLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Condition: TelemetryIngressEnabled
+    Properties:
+      Scheme: internal
+      Type: network
+      Subnets:
+      - Ref: SubnetId
+      SecurityGroups:
+      - Ref: TelemetryLoadBalancerSecurityGroup
+
+  TelemetryTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Condition: TelemetryIngressEnabled
+    Properties:
+      Port: 4318
+      Protocol: TCP
+      TargetType: instance
+      VpcId:
+        Ref: VpcId
+      HealthCheckEnabled: true
+      HealthCheckProtocol: TCP
+      HealthCheckPort: "4318"
+
+  TelemetryListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Condition: TelemetryIngressEnabled
+    Properties:
+      LoadBalancerArn:
+        Ref: TelemetryLoadBalancer
+      Port: 4318
+      Protocol: TCP
+      DefaultActions:
+      - Type: forward
+        TargetGroupArn:
+          Ref: TelemetryTargetGroup
 
   RunnerInstanceProfile:
     Properties:
@@ -299,3 +418,10 @@ Outputs:
   RunnerInstanceRoleARN:
     Description: The ARN of role used by the instances managed by the Runner ASG
     Value: !GetAtt RunnerInstanceRole.Arn
+  TelemetryEndpoint:
+    Description: Private plaintext OTLP HTTP endpoint, or an empty string when telemetry ingress is disabled.
+    Value:
+      Fn::If:
+      - TelemetryIngressEnabled
+      - Fn::Sub: http://${TelemetryLoadBalancer.DNSName}:4318
+      - ""
