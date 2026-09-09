@@ -46,9 +46,9 @@ Parameters:
     Type: String
     Description: VPC containing the runner and telemetry endpoint. Required when telemetry ingress is enabled.
     Default: ""
-  VpcCIDR:
+  TelemetrySourcePrefixListId:
     Type: String
-    Description: VPC CIDR allowed to send telemetry. Required when telemetry ingress is enabled.
+    Description: IPv4 prefix list allowed to send telemetry. Required when telemetry ingress is enabled.
     Default: ""
 
 Rules:
@@ -64,7 +64,7 @@ Rules:
           - Ref: VpcId
           - ""
       AssertDescription: VpcId must be provided when telemetry ingress is enabled.
-  TelemetryIngressRequiresVpcCIDR:
+  TelemetryIngressRequiresSourcePrefixList:
     RuleCondition:
       Fn::Equals:
       - Ref: EnableTelemetryIngress
@@ -73,9 +73,9 @@ Rules:
     - Assert:
         Fn::Not:
         - Fn::Equals:
-          - Ref: VpcCIDR
+          - Ref: TelemetrySourcePrefixListId
           - ""
-      AssertDescription: VpcCIDR must be provided when telemetry ingress is enabled.
+      AssertDescription: TelemetrySourcePrefixListId must be provided when telemetry ingress is enabled.
 
 Conditions:
   HasRunnerEnvVars:
@@ -133,8 +133,8 @@ Resources:
       - IpProtocol: tcp
         FromPort: 4318
         ToPort: 4318
-        CidrIp:
-          Ref: VpcCIDR
+        SourcePrefixListId:
+          Ref: TelemetrySourcePrefixListId
       SecurityGroupEgress:
       - IpProtocol: tcp
         FromPort: 4318

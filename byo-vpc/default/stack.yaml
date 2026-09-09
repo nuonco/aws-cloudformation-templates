@@ -52,6 +52,7 @@ Resources:
               - Effect: Allow
                 Action:
                   - ec2:DescribeSubnets
+                  - ec2:DescribeVpcs
                   - ec2:DescribeRouteTables
                   - ec2:DescribeNatGateways
                 Resource: "*"
@@ -106,6 +107,12 @@ Resources:
                       return
 
                   ec2 = boto3.client('ec2')
+                  vpc = ec2.describe_vpcs(VpcIds=[vpc_id])['Vpcs'][0]
+                  cidrs = sorted(
+                      association['CidrBlock']
+                      for association in vpc['CidrBlockAssociationSet']
+                      if association['CidrBlockState']['State'] == 'associated'
+                  )
                   response = ec2.describe_subnets(SubnetIds=all_subnets)
 
                   invalid_subnets = []
@@ -155,7 +162,8 @@ Resources:
                       'ValidatedPublicSubnets': ','.join(public_subnets),
                       'ValidatedPrivateSubnets': ','.join(private_subnets),
                       'ValidatedRunnerSubnet': runner_subnet,
-                      'VpcId': vpc_id
+                      'VpcId': vpc_id,
+                      'VpcCidrEntries': [{'Cidr': cidr} for cidr in cidrs]
                   })
 
               except Exception as e:
@@ -167,15 +175,37 @@ Resources:
     Type: Custom::SubnetValidation
     Properties:
       ServiceToken: !GetAtt SubnetValidatorFunction.Arn
+      # Changing the response contract must also rerun validation on existing stacks.
+      SchemaVersion: "2"
       VpcId: !Ref VpcID
       PublicSubnets: !Ref PublicSubnetIDs
       PrivateSubnets: !Ref PrivateSubnetIDs
       RunnerSubnet: !Ref RunnerSubnetID
 
+  VpcIpv4PrefixList:
+    Type: AWS::EC2::PrefixList
+    Properties:
+      PrefixListName: !Sub ${NuonInstallID}-vpc-ipv4
+      AddressFamily: IPv4
+      # Covers the maximum VPC IPv4 CIDR quota without resizing alongside entry updates.
+      MaxEntries: 50
+      Entries: !GetAtt SubnetValidation.VpcCidrEntries
+      Tags:
+        - Key: "install.nuon.co/id"
+          Value: !Ref NuonInstallID
+        - Key: "org.nuon.co/id"
+          Value: !Ref NuonOrgID
+        - Key: "app.nuon.co/id"
+          Value: !Ref NuonAppID
+
 Outputs:
   VPC:
     Description: The VPC ID.
     Value: !Ref VpcID
+
+  VpcIpv4PrefixListId:
+    Description: Prefix list containing the associated IPv4 CIDRs of this VPC.
+    Value: !Ref VpcIpv4PrefixList
 
   PublicSubnets:
     Description: List of public subnet IDs.
