@@ -37,3 +37,4 @@ at least one subnet.
 | RunnerSubnet           | The dedicated private subnet for the runner.          |        |
 | SecurityGroupId        | The default security group ID (no egress by default). |        |
 | VPC                    | The VPC.                                              |        |
+| VpcIpv4PrefixListId     | Prefix list containing the VPC's IPv4 CIDR.            |        |

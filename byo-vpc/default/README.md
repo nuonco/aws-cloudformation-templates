@@ -6,6 +6,12 @@ them available them in the format expected by Nuon via the PhoneHome props.
 
 - Does not create any VPC or subnet resources
 - Validates that all provided subnets belong to the specified VPC using a Lambda-backed Custom Resource for validation
+- Creates an IPv4 prefix list from the VPC's associated CIDRs for same-VPC telemetry ingress, including secondary CIDRs.
+
+The existing validation Lambda discovers CIDRs using `ec2:DescribeVpcs`; it does not modify the network. Discovery runs
+on creation and when the validation resource's properties change, not continuously. Out-of-band CIDR changes require
+rerunning validation through a stack update. The prefix list remains when telemetry ingress is disabled and reserves
+50 rules when referenced by a security group, covering AWS's maximum IPv4 CIDR count per VPC without resizing the list.
 
 ### Notes
 
@@ -63,3 +69,4 @@ subnets, remove the subnets (starting with 3 then 2). Will create at least one s
 | PublicSubnets  | A list of the public subnets.                |        |
 | RunnerSubnet   | The dedicated private subnet for the runner. |        |
 | VPC            | The VPC.                                     |        |
+| VpcIpv4PrefixListId | Prefix list containing the VPC's associated IPv4 CIDRs. | |

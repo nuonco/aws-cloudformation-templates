@@ -622,10 +622,30 @@ Resources:
         - Key: "app.nuon.co/id"
           Value: !Ref NuonAppID
 
+  VpcIpv4PrefixList:
+    Type: AWS::EC2::PrefixList
+    Properties:
+      PrefixListName: !Sub ${NuonInstallID}-vpc-ipv4
+      AddressFamily: IPv4
+      MaxEntries: 1
+      Entries:
+        - Cidr: !GetAtt VPC.CidrBlock
+      Tags:
+        - Key: "install.nuon.co/id"
+          Value: !Ref NuonInstallID
+        - Key: "org.nuon.co/id"
+          Value: !Ref NuonOrgID
+        - Key: "app.nuon.co/id"
+          Value: !Ref NuonAppID
+
 Outputs:
   VPC:
     Description: The VPC.
     Value: !Ref VPC
+
+  VpcIpv4PrefixListId:
+    Description: Prefix list containing this VPC's IPv4 CIDR.
+    Value: !Ref VpcIpv4PrefixList
 
   PublicSubnets:
     Description: A list of the public subnets.
