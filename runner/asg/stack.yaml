@@ -38,7 +38,7 @@ Parameters:
   EnableTelemetryIngress:
     Type: String
     Description: Create a private OTLP HTTP endpoint for the runner.
-    Default: "false"
+    Default: "true"
     AllowedValues:
     - "true"
     - "false"
