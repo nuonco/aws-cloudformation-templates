@@ -12,7 +12,7 @@
 | RunnerId            | The runner ID                                                                          |           String            |                                                                                     |                |
 | RunnerInitScriptUrl | URL for the init script that is added to the use data for the Runner ASG VM instances. |           String            | https://raw.githubusercontent.com/nuonco/runner/refs/heads/main/scripts/aws/init.sh |                |
 | SubnetId            | The subnet on which the app will run within the selected VPC.                          |    AWS::EC2::Subnet::Id     |                                                                                     |                |
-| EnableTelemetryIngress | Create the private runner OTLP HTTP endpoint.                                       |           String            |                                        false                                        | true, false    |
+| EnableTelemetryIngress | Create the private runner OTLP HTTP endpoint.                                       |           String            |                                        true                                         | true, false    |
 | VpcId               | VPC containing the runner and endpoint; required when telemetry ingress is enabled.    |           String            |                                                                                     |                |
 | TelemetrySourcePrefixListId | IPv4 prefix list allowed to send telemetry; required when telemetry ingress is enabled. | String | | |
 
@@ -28,8 +28,9 @@
 | TelemetryEndpoint     | Private OTLP HTTP URL, or an empty string when disabled.         |        |
 
 With a compatible Nuon control plane and a VPC template exposing `VpcIpv4PrefixListId`, the parent install stack exposes
-`EnableTelemetryIngress` under Runner Configuration and supplies the VPC ID and prefix list automatically. This works
-with both managed and BYO VPC templates; no telemetry-specific network input is needed. The endpoint is
+`EnableTelemetryIngress` under Runner Configuration, defaults it to `true`, and supplies the VPC ID and prefix list automatically.
+Customers can set it to `false` to skip the endpoint and its NLB charges. This works with both managed and BYO VPC
+templates; no telemetry-specific network input is needed. The endpoint is
 also available to component configuration as `{{ .nuon.install_stack.outputs.telemetry_endpoint }}`. For example:
 
 ```toml
