@@ -29,10 +29,6 @@ Parameters:
     Type: String
     Description: EC2 instance type for the runner
     Default: t3.medium
-  ImageId:
-    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
-    Description: SSM parameter path that resolves to the runner AMI ID. Re-resolved on every stack update.
-    Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64
   RootVolumeSize:
     Type: Number
     Description: Size of the root EBS volume in GB
@@ -358,8 +354,7 @@ Resources:
         IamInstanceProfile:
           Name:
             Ref: RunnerInstanceProfile
-        ImageId:
-          Ref: ImageId
+        ImageId: resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64
         InstanceType:
           Ref: InstanceType
         NetworkInterfaces:
