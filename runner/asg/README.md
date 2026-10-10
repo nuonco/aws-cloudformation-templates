@@ -4,6 +4,7 @@
 
 | Name                | Description                                                                            |            Type             |                                       Default                                       | Allowed Values |
 | ------------------- | -------------------------------------------------------------------------------------- | :-------------------------: | :---------------------------------------------------------------------------------: | :------------- |
+| ImageId             | SSM parameter path that resolves to the runner AMI ID. Re-resolved on every stack update. | AWS::SSM::Parameter::Value<AWS::EC2::Image::Id> | /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64 |                |
 | InstallId           | The install ID                                                                         |           String            |                                                                                     |                |
 | InstanceType        | EC2 instance type for the runner                                                       |           String            |                                     t3a.medium                                      |                |
 | RootVolumeSize      | Size of the root EBS volume in GB                                                      |           Number            |                                         30                                          |                |
