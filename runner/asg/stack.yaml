@@ -50,6 +50,18 @@ Parameters:
     Type: String
     Description: IPv4 prefix list allowed to send telemetry. Required when telemetry ingress is enabled.
     Default: ""
+  RunnerAmiAutoUpdate:
+    Type: String
+    Description: Resolve the latest AL2023 AMI at every instance launch instead of once at stack create/update. Ignored when RunnerAmiId is set.
+    Default: "false"
+    AllowedValues:
+    - "true"
+    - "false"
+  RunnerAmiId:
+    Type: String
+    Description: Pin the runner to a specific AMI ID. Leave empty to use the latest AL2023 AMI.
+    Default: ""
+    AllowedPattern: '^$|^ami-[0-9a-f]+$'
 
 Rules:
   TelemetryIngressRequiresVpcId:
@@ -86,6 +98,15 @@ Conditions:
   TelemetryIngressEnabled:
     Fn::Equals:
     - Ref: EnableTelemetryIngress
+    - "true"
+  HasRunnerAmiId:
+    Fn::Not:
+    - Fn::Equals:
+      - Ref: RunnerAmiId
+      - ""
+  RunnerAmiAutoUpdateEnabled:
+    Fn::Equals:
+    - Ref: RunnerAmiAutoUpdate
     - "true"
 
 Resources:
@@ -355,7 +376,13 @@ Resources:
           Name:
             Ref: RunnerInstanceProfile
         ImageId:
-          Fn::Sub: '{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64}}'
+          Fn::If:
+          - HasRunnerAmiId
+          - Ref: RunnerAmiId
+          - Fn::If:
+            - RunnerAmiAutoUpdateEnabled
+            - resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64
+            - Fn::Sub: '{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64}}'
         InstanceType:
           Ref: InstanceType
         NetworkInterfaces:
