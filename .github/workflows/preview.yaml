@@ -1,0 +1,86 @@
+---
+# Publishes stack.yaml files for PRs labeled `preview` to
+# aws-cloudformation-templates/preview/pr-<number>/<short-sha>/. Expires after 30 days.
+name: preview
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled]
+
+permissions:
+  contents: read
+  id-token: write
+  pull-requests: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  AWS_REGION: us-west-2
+
+jobs:
+  publish:
+    name: publish preview templates
+    if: >-
+      contains(github.event.pull_request.labels.*.name, 'preview') &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-session-name: gha-cfn-templates-preview-pr-${{ github.event.pull_request.number }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Publish
+        id: publish
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          short_sha="${HEAD_SHA:0:7}"
+          subpath="preview/pr-${PR_NUMBER}/${short_sha}"
+          scripts/publish.sh "$subpath" \
+            --retention preview \
+            --markdown-out "$RUNNER_TEMP/published.md"
+          echo "subpath=$subpath" >> "$GITHUB_OUTPUT"
+          echo "short_sha=$short_sha" >> "$GITHUB_OUTPUT"
+
+      - name: Build comment body
+        run: |
+          {
+            echo "<!-- cfn-templates-preview -->"
+            echo "### Preview templates published"
+            echo
+            echo "Commit \`${{ steps.publish.outputs.short_sha }}\` · prefix \`aws-cloudformation-templates/${{ steps.publish.outputs.subpath }}/\` · expires in 30 days"
+            echo
+            cat "$RUNNER_TEMP/published.md"
+          } > "$RUNNER_TEMP/comment.md"
+          cat "$RUNNER_TEMP/comment.md" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Find existing comment
+        id: find
+        uses: peter-evans/find-comment@v3
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          comment-author: github-actions[bot]
+          body-includes: "<!-- cfn-templates-preview -->"
+
+      - name: Create or update comment
+        uses: peter-evans/create-or-update-comment@v5
+        with:
+          comment-id: ${{ steps.find.outputs.comment-id }}
+          issue-number: ${{ github.event.pull_request.number }}
+          body-path: ${{ runner.temp }}/comment.md
+          edit-mode: replace

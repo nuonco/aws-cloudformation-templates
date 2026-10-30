@@ -20,3 +20,8 @@ Examples:
 uv run scripts/inspect_egress_domains.py aws.github.io
 uv run scripts/inspect_egress_domains.py https://aws.github.io/eks-charts/index.yaml
 ```
+
+### publish.sh
+
+Upload every `*/stack.yaml` to the `nuon-artifacts` bucket under
+`aws-cloudformation-templates/<subpath>/<stack>/stack.yaml`. Called by the `release` and `preview` workflows.
