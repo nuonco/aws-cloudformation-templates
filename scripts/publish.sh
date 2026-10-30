@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 #
-# Publish every */stack.yaml to s3://nuon-artifacts/aws-cloudformation-templates/<subpath>/<stack>/stack.yaml
+# Publish */stack.yaml files to s3://nuon-artifacts/aws-cloudformation-templates/<subpath>/<stack>/stack.yaml
 #
-#   scripts/publish.sh <subpath> --retention <release|preview> [--markdown-out <file>] [--force]
+#   scripts/publish.sh <subpath> --retention <release|preview> [--markdown-out <file>] [--force] [<stack>...]
 #
+# Publishes every stack by default. Pass stack directories (e.g. runner/asg) to publish only those.
 # Release subpaths are immutable unless --force is passed.
 
 set -euo pipefail
@@ -16,15 +17,16 @@ subpath=""
 retention=""
 markdown_out=""
 force="false"
+only=()
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --retention)    retention="$2"; shift 2 ;;
     --markdown-out) markdown_out="$2"; shift 2 ;;
     --force)        force="true"; shift ;;
-    -h|--help)      sed -n '2,7p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h|--help)      sed -n '2,8p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     -*)             echo "unknown flag: $1" >&2; exit 2 ;;
-    *)              if [[ -z "$subpath" ]]; then subpath="$1"; shift; else echo "unexpected arg: $1" >&2; exit 2; fi ;;
+    *)              if [[ -z "$subpath" ]]; then subpath="$1"; else only+=("${1#./}"); fi; shift ;;
   esac
 done
 
@@ -44,7 +46,18 @@ fi
 
 cd "$(git -C "$(dirname "$0")" rev-parse --show-toplevel)"
 
-stacks=$(find . -name stack.yaml -not -path './.git/*' | sed 's|^\./||; s|/stack\.yaml$||' | sort)
+if [[ -n "${only[*]:-}" ]]; then
+  for stack in "${only[@]}"; do
+    stack="${stack%/}"
+    if [[ ! -f "$stack/stack.yaml" ]]; then
+      echo "error: $stack/stack.yaml not found" >&2
+      exit 2
+    fi
+  done
+  stacks=$(printf '%s\n' "${only[@]%/}" | sort -u)
+else
+  stacks=$(find . -name stack.yaml -not -path './.git/*' | sed 's|^\./||; s|/stack\.yaml$||' | sort)
+fi
 if [[ -z "$stacks" ]]; then
   echo "error: no stack.yaml files found" >&2
   exit 1

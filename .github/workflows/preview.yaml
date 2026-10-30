@@ -1,6 +1,8 @@
 ---
-# Publishes stack.yaml files for PRs labeled `preview` to
+# Publishes stack.yaml files changed by PRs labeled `preview` to
 # aws-cloudformation-templates/preview/pr-<number>/<short-sha>/. Expires after 30 days.
+# Only stacks whose stack.yaml was added or modified in the PR are published; other
+# changes (README, scripts, ...) do not trigger a publish.
 name: preview
 
 on:
@@ -36,7 +38,17 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
 
+      - name: Detect changed templates
+        id: changes
+        uses: dorny/paths-filter@v3
+        with:
+          list-files: csv
+          filters: |
+            stacks:
+              - added|modified: '**/stack.yaml'
+
       - name: Configure AWS credentials
+        if: steps.changes.outputs.stacks == 'true'
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
@@ -44,32 +56,39 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Publish
+        if: steps.changes.outputs.stacks == 'true'
         id: publish
         env:
           PR_NUMBER: ${{ github.event.pull_request.number }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          CHANGED_FILES: ${{ steps.changes.outputs.stacks_files }}
         run: |
           short_sha="${HEAD_SHA:0:7}"
           subpath="preview/pr-${PR_NUMBER}/${short_sha}"
+          IFS=, read -ra files <<<"$CHANGED_FILES"
+          stacks=("${files[@]%/stack.yaml}")
           scripts/publish.sh "$subpath" \
             --retention preview \
-            --markdown-out "$RUNNER_TEMP/published.md"
+            --markdown-out "$RUNNER_TEMP/published.md" \
+            "${stacks[@]}"
           echo "subpath=$subpath" >> "$GITHUB_OUTPUT"
           echo "short_sha=$short_sha" >> "$GITHUB_OUTPUT"
 
       - name: Build comment body
+        if: steps.changes.outputs.stacks == 'true'
         run: |
           {
             echo "<!-- cfn-templates-preview -->"
             echo "### Preview templates published"
             echo
-            echo "Commit \`${{ steps.publish.outputs.short_sha }}\` · prefix \`aws-cloudformation-templates/${{ steps.publish.outputs.subpath }}/\` · expires in 30 days"
+            echo "Commit \`${{ steps.publish.outputs.short_sha }}\` · prefix \`aws-cloudformation-templates/${{ steps.publish.outputs.subpath }}/\` · expires in 30 days · only stacks whose \`stack.yaml\` changed"
             echo
             cat "$RUNNER_TEMP/published.md"
           } > "$RUNNER_TEMP/comment.md"
           cat "$RUNNER_TEMP/comment.md" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Find existing comment
+        if: steps.changes.outputs.stacks == 'true'
         id: find
         uses: peter-evans/find-comment@v3
         with:
@@ -78,6 +97,7 @@ jobs:
           body-includes: "<!-- cfn-templates-preview -->"
 
       - name: Create or update comment
+        if: steps.changes.outputs.stacks == 'true'
         uses: peter-evans/create-or-update-comment@v5
         with:
           comment-id: ${{ steps.find.outputs.comment-id }}
