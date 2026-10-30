@@ -15,6 +15,7 @@
 | EnableTelemetryIngress | Create the private runner OTLP HTTP endpoint.                                       |           String            |                                        true                                         | true, false    |
 | VpcId               | VPC containing the runner and endpoint; required when telemetry ingress is enabled.    |           String            |                                                                                     |                |
 | TelemetrySourcePrefixListId | IPv4 prefix list allowed to send telemetry; required when telemetry ingress is enabled. | String | | |
+| NuonIdentityAccountId | AWS account ID of the Nuon identity account. When set, the instance role may assume `role/nuon/runners/nuon-runner-<RunnerId>` there for runner API authentication. Empty disables the grant. | String | | 12-digit account ID or empty |
 
 `EnableTelemetryIngress` controls creation of the private, plaintext OTLP endpoint on TCP port 4318. It is separate from the runner collector's runtime enablement toggle, so both must be enabled for ingestion to succeed.
 
