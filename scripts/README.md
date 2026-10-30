@@ -23,5 +23,9 @@ uv run scripts/inspect_egress_domains.py https://aws.github.io/eks-charts/index.
 
 ### publish.sh
 
-Upload every `*/stack.yaml` to the `nuon-artifacts` bucket under
+Upload `*/stack.yaml` files to the `nuon-artifacts` bucket under
 `aws-cloudformation-templates/<subpath>/<stack>/stack.yaml`. Called by the `release` and `preview` workflows.
+
+Publishes every stack by default (releases). Pass stack directories as trailing arguments
+(e.g. `runner/asg vpc/eks/default`) to publish only those. The `preview` workflow uses
+`dorny/paths-filter` to pass only stacks whose `stack.yaml` changed in the PR.
