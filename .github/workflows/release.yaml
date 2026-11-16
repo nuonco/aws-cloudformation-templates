@@ -37,7 +37,7 @@ jobs:
     steps:
       - name: Determine next version
         id: semver
-        uses: ietf-tools/semver-action@v1
+        uses: ietf-tools/semver-action@v1.12.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           branch: main
@@ -60,10 +60,10 @@ jobs:
       id-token: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4.4.0
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v4.3.1
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           role-session-name: gha-cfn-templates-release
