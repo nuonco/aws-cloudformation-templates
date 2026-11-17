@@ -222,6 +222,8 @@ Resources:
 
   RunnerInstanceRole:
     Properties:
+      RoleName:
+        Fn::Sub: ${RunnerId}-runner-instance
       AssumeRolePolicyDocument:
         Statement:
         - Action: sts:AssumeRole
